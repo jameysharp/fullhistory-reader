@@ -1,0 +1,19 @@
+{
+  "name": "reader",
+  "version": "0.0.1",
+  "description": "Full-history RSS reader",
+  "author": "Jamey Sharp <jamey@minilop.net>",
+  "license": "BSD-2-Clause",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jameysharp/fullhistory-reader.git"
+  },
+  "dependencies": {
+    "feedparser": "^2.2.9",
+    "request": "^2.87.0"
+  }
+}

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Full-history RSS Reader</title>
+    <style>
+      input[type="text"] {
+        width: 50%;
+      }
+      webview {
+        position: fixed;
+        top: 2em;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <label>Feed:
+      <input type="text" id="feedurl"/>
+    </label>
+    <a id="current">Newest</a>
+    <a id="prev">Earlier</a>
+    <label>Page:
+      <select>
+      </select>
+    </label>
+    <webview src="about:blank"/>
+
+    <script>
+      const FeedParser = require('feedparser')
+      const request = require('request')
+
+      const webview = document.querySelector('webview')
+      const select = document.querySelector('select')
+      const urlinput = document.querySelector('#feedurl')
+      const currentlink = document.querySelector('#current')
+      const prevlink = document.querySelector('#prev')
+
+      var contents = {};
+
+      urlinput.onchange = function() {
+        const feedurl = this.value
+        const req = request(feedurl)
+        const feedparser = new FeedParser({
+          'feedurl': feedurl
+        })
+
+        req.on('error', function(error) {
+          console.log(error)
+        })
+        req.on('response', function(res) {
+          if (res.statusCode !== 200) {
+            this.emit('error', new Error('Bad status ' + res.statusCode))
+          } else {
+            while (select.firstChild)
+              select.removeChild(select.firstChild)
+            contents = {}
+            this.pipe(feedparser)
+          }
+        })
+        feedparser.on('error', function(error) {
+          console.log(error)
+        })
+        feedparser.on('meta', function(meta) {
+          function setlink(el, target) {
+            el.onclick = function() {
+              urlinput.value = target
+              urlinput.dispatchEvent(new Event('change'))
+              return false
+            }
+            el.setAttribute('href', '#')
+          }
+          prevlink.removeAttribute('href')
+          currentlink.removeAttribute('href')
+          links = meta['atom:link']
+          if (links === undefined)
+            links = []
+          else if (!Array.isArray(links))
+            links = [links]
+          links.forEach(function(link) {
+            if (link['@']['rel'] === 'prev-archive') {
+              setlink(prevlink, link['@']['href'])
+            } else if (link['@']['rel'] === 'current') {
+              setlink(currentlink, link['@']['href'])
+            }
+          })
+        })
+        feedparser.on('readable', function() {
+          var item
+          while (item = this.read()) {
+            if (item.description)
+              contents[item.link] = item.description
+            const option = document.createElement('option')
+            option.setAttribute('value', item.link)
+            option.appendChild(document.createTextNode(item.title))
+            select.appendChild(option)
+          }
+        })
+        feedparser.on('end', function() {
+          select.dispatchEvent(new Event('change'))
+        })
+      }
+
+      select.onchange = function() {
+        if (contents[this.value])
+          webview.loadURL('data:text/html;charset=utf-8,' + contents[this.value])
+        else
+          webview.loadURL(this.value)
+      }
+    </script>
+  </body>
+</html>
